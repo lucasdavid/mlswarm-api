@@ -1,0 +1,2 @@
+class ClassNotFound(RuntimeError):
+    pass
