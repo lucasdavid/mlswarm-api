@@ -6,7 +6,13 @@ from . import models
 class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Dataset
-        fields = ('id', 'url', 'delimiter', 'parser')
+        fields = ('id', 'content', 'delimiter', 'parsing_service')
+
+
+class EstimatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Estimator
+        fields = ('service',)
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -19,10 +25,11 @@ class TrainingSerializer(TaskSerializer):
     class Meta:
         model = models.Training
         fields = ('dataset', 'status', 'errors',
-                  'result', 'user', 'estimator',
+                  'output', 'user', 'estimator',
+                  'learning_rate', 'dropout_rate', 'batch_size',
                   'started_at', 'finished_at',
                   'created_at', 'updated_at')
-        read_only_fields = ('status', 'result', 'errors',
+        read_only_fields = ('status', 'output', 'errors',
                             'started_at', 'finished_at',
                             'created_at', 'updated_at')
 
@@ -31,9 +38,9 @@ class PredictionSerializer(TaskSerializer):
     class Meta:
         model = models.Prediction
         fields = ('dataset', 'status', 'errors',
-                  'result', 'user', 'training',
+                  'output', 'user', 'estimator',
                   'started_at', 'finished_at',
                   'created_at', 'updated_at')
-        read_only_fields = ('status', 'result', 'errors',
+        read_only_fields = ('status', 'output', 'errors',
                             'started_at', 'finished_at',
                             'created_at', 'updated_at')

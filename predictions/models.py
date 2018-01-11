@@ -1,9 +1,9 @@
-from time import sleep
-
 from django.contrib.auth.models import User
 from django.db.models import (Model, TextField, ForeignKey, URLField,
                               DateTimeField, CharField, FilePathField,
-                              DO_NOTHING, PROTECT)
+                              DO_NOTHING, PROTECT, BooleanField,
+                              PositiveIntegerField,
+                              FloatField)
 from django.forms import model_to_dict
 from django.utils import timezone
 
@@ -17,20 +17,36 @@ parser_choices = list(zip(parser_choices, parser_choices))
 
 
 class Dataset(Model):
-    url = URLField(help_text='A valid URL to the dataset being predicted.')
+    content = URLField(help_text='A valid path to the dataset being '
+                                 'predicted or its content.')
     delimiter = CharField(max_length=1, default=',')
-    service = CharField(max_length=32, choices=parser_choices,
-                        blank=False, null=False,
-                        help_text='the parsing service used.')
+    parsing_service = CharField(max_length=32, choices=parser_choices,
+                                blank=False, null=False,
+                                help_text='the parsing service used.')
+    ignore_features = TextField(blank=True)
+    to_lowercase = BooleanField(default=False)
 
     def __str__(self):
-        return str(self.url)
+        return '#%i %s' % (self.id, str(self.content))
+
+    def parse(self):
+        """Parse data referenced by `content` and return it.
+
+        :return: the data parsed.
+        """
+        parser_cls = services.parsers.get(self.parsing_service)
+        parser = parser_cls(**model_to_dict(self))
+        return parser.parse()
 
 
 class Estimator(Model):
     service = CharField(max_length=32,
                         choices=estimator_choices,
                         help_text='The ML service used.')
+
+    def build(self):
+        estimator_cls = services.estimators.get(self.service)
+        return estimator_cls(**model_to_dict(self))
 
 
 class Task(Model):
@@ -102,6 +118,9 @@ class Task(Model):
 
 
 class Training(Task):
+    learning_rate = FloatField(default=0.01)
+    dropout_rate = FloatField(default=0.0)
+    batch_size = PositiveIntegerField(default=32)
     saved_at = FilePathField(null=True,
                              help_text='Path where model should be saved.')
 
@@ -110,18 +129,14 @@ class Training(Task):
 
     def run(self):
         print('training...')
-        parser_cls = services.parsers.get(self.dataset.service)
-        estimator_cls = services.estimators.get(self.estimator.service)
-
-        parser = parser_cls(**model_to_dict(self.dataset))
-        estimator = estimator_cls(**model_to_dict(self.estimator))
-
-        data = parser.process()
+        data = self.dataset.parse()
+        estimator = self.estimator.build()
         self.output = estimator.train(data)
-        self.status = Task.StatusType.failed.value
 
 
 class Prediction(Task):
     def run(self):
         print('predicting...')
-        sleep(3.0)
+        data = self.dataset.parse()
+        estimator = self.estimator.build()
+        self.output = estimator.predict(data)

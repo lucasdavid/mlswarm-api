@@ -9,6 +9,7 @@ from . import views as root_views
 router = routers.DefaultRouter()
 router.register(r'users', root_views.UserViewSet)
 router.register(r'datasets', predictions_views.DatasetViewSet)
+router.register(r'estimators', predictions_views.EstimatorViewSet)
 router.register(r'trainings', predictions_views.TrainingViewSet)
 router.register(r'predictions', predictions_views.PredictionViewSet)
 

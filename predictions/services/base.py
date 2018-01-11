@@ -21,7 +21,7 @@ class Bag:
 
 
 class GenericDatasetParser(metaclass=abc.ABCMeta):
-    def digest(self):
+    def parse(self):
         raise NotImplementedError
 
 

@@ -28,3 +28,8 @@ class TrainingViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset = models.Dataset.objects.all()
     serializer_class = serializers.DatasetSerializer
+
+
+class EstimatorViewSet(viewsets.ModelViewSet):
+    queryset = models.Estimator.objects.all()
+    serializer_class = serializers.EstimatorSerializer
