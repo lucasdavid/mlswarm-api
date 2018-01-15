@@ -2,6 +2,8 @@ import abc
 
 from . import errors
 
+import pandas as pd
+
 
 class Bag:
     def __init__(self, classes: dict):
@@ -22,6 +24,8 @@ class Bag:
 
 class GenericDatasetParser(metaclass=abc.ABCMeta):
     def parse(self):
+        """Parse data into a pandas DataFrame.
+        """
         raise NotImplementedError
 
 

@@ -24,12 +24,10 @@ def get_class_weights(y):
 
 
 class StoneTerminalClassifier(GenericEstimator):
-    def __init__(self, x, y, saved_at=None):
-        self.x = x
-        self.y = y
-        self.weights = saved_at
+    def __init__(self, inputs):
+        self.inputs = inputs
 
-    def train(self):
+    def train(self, report_dir, weights):
         x, y, ids, dates = (d[e] for e in ('x', 'y', 'ids', 'dates'))
         report_dir = params.namespace
         weights = params.get('weights', settings.Model.resuming_weights)

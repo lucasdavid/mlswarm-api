@@ -1,9 +1,13 @@
 from rest_framework import viewsets, mixins
+from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from . import models, serializers
 
+from ml.utils import NestedViewSetCreateMixin
 
-class PredictionViewSet(mixins.ListModelMixin,
+
+class PredictionViewSet(NestedViewSetMixin,
+                        mixins.ListModelMixin,
                         mixins.RetrieveModelMixin,
                         mixins.CreateModelMixin,
                         mixins.DestroyModelMixin,
@@ -16,7 +20,7 @@ class PredictionViewSet(mixins.ListModelMixin,
         training.start()
 
 
-class TrainingViewSet(viewsets.ModelViewSet):
+class TrainingViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     queryset = models.Training.objects.all()
     serializer_class = serializers.TrainingSerializer
 
@@ -25,11 +29,16 @@ class TrainingViewSet(viewsets.ModelViewSet):
         training.start()
 
 
-class DatasetViewSet(viewsets.ModelViewSet):
-    queryset = models.Dataset.objects.all()
+class DatasetViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
+    queryset = models.Dataset.objects.select_related().defer('chunks__content')
     serializer_class = serializers.DatasetSerializer
 
 
-class EstimatorViewSet(viewsets.ModelViewSet):
+class ChunkDatasetViewSet(NestedViewSetCreateMixin, viewsets.ModelViewSet):
+    queryset = models.Chunk.objects.all()
+    serializer_class = serializers.ChunkSerializer
+
+
+class EstimatorViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     queryset = models.Estimator.objects.all()
     serializer_class = serializers.EstimatorSerializer

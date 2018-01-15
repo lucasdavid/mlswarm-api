@@ -1,17 +1,22 @@
 from django.conf.urls import url, include
 from django.contrib import admin
-from rest_framework import routers
 from rest_framework.documentation import include_docs_urls
+from rest_framework_extensions.routers import ExtendedDefaultRouter
 
-from predictions import views as predictions_views
+from predictions import views as p_views
 from . import views as root_views
 
-router = routers.DefaultRouter()
+router = ExtendedDefaultRouter()
 router.register(r'users', root_views.UserViewSet)
-router.register(r'datasets', predictions_views.DatasetViewSet)
-router.register(r'estimators', predictions_views.EstimatorViewSet)
-router.register(r'trainings', predictions_views.TrainingViewSet)
-router.register(r'predictions', predictions_views.PredictionViewSet)
+router.register(r'estimators', p_views.EstimatorViewSet)
+router.register(r'trainings', p_views.TrainingViewSet)
+router.register(r'predictions', p_views.PredictionViewSet)
+(router
+    .register(r'datasets', p_views.DatasetViewSet,
+              base_name='dataset')
+    .register(r'chunks', p_views.ChunkDatasetViewSet,
+              parents_query_lookups=['dataset'],
+              base_name='dataset-chunks'))
 
 urlpatterns = [
     url(r'^', include(router.urls)),
