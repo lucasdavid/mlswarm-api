@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from sklearn import metrics
 from sklearn.exceptions import NotFittedError
 
-from ..base import GenericEstimator
+from ..base import IEstimator
 
 
 def get_class_weights(y):
@@ -23,7 +23,7 @@ def get_class_weights(y):
     return {cls: float(majority / count) for cls, count in counter.items()}
 
 
-class StoneTerminalClassifier(GenericEstimator):
+class StoneTerminalClassifier(IEstimator):
     def __init__(self, inputs):
         self.inputs = inputs
 

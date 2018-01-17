@@ -14,7 +14,7 @@ router.register(r'predictions', p_views.PredictionViewSet)
 (router
     .register(r'datasets', p_views.DatasetViewSet,
               base_name='dataset')
-    .register(r'chunks', p_views.ChunkDatasetViewSet,
+    .register(r'chunks', p_views.ChunkViewSet,
               parents_query_lookups=['dataset'],
               base_name='dataset-chunks'))
 

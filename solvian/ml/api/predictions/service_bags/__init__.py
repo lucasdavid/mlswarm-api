@@ -1,4 +1,4 @@
-from . import _parsers, _estimators, errors
+from . import _parsers, simple_dense_estimator, errors
 from .base import Bag
 from .stone import estimators as stone_estimators
 
@@ -9,8 +9,8 @@ parsers = Bag({
 })
 
 estimators = Bag({
-    'simple-classifier': _estimators.SimpleClassifier,
+    'dense-network-classifier': simple_dense_estimator.DenseNetworkClassifier,
     'stone-terminal-heath-classifier': stone_estimators.StoneTerminalClassifier,
 })
 
-__all__ = ['parsers', 'estimators', 'errors']
+__all__ = ['parsers', 'estimators']

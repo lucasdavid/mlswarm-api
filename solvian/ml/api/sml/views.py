@@ -11,3 +11,9 @@ class UserViewSet(NestedViewSetMixin,
                   viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = serializers.UserSerializer
+
+
+class NestedViewSetCreateMixin(NestedViewSetMixin):
+    def perform_create(self, serializer):
+        kwargs_id = {key + '_id': value for key, value in self.get_parents_query_dict().items()}
+        serializer.save(**kwargs_id)
