@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pandas as pd
 from django.contrib.auth.models import User
@@ -12,7 +13,7 @@ from django.utils import timezone
 from predictions import service_bags
 from sml.models import ChoiceEnum
 
-training_fs = FileSystemStorage('/media/trainings/')
+training_fs = FileSystemStorage('trainings/')
 
 
 class IDateTracked(Model):
@@ -56,8 +57,8 @@ class Chunk(IDateTracked):
         params = model_to_dict(self)
         ignore_features, delimiter = params['ignore_features'], params['delimiter']
         params['ignore_features'] = (None if not ignore_features else
-                                     ignore_features.split(self.delimiter) if isinstance(ignore_features, str) else
-                                     ignore_features)
+        ignore_features.split(self.delimiter) if isinstance(ignore_features, str) else
+        ignore_features)
         return service_bags.parsers.build(self.service, **params).process()
 
     def __str__(self):
@@ -105,6 +106,10 @@ class Task(IDateTracked):
     started_at = DateTimeField(null=True, help_text='The starting time of the task.')
     finished_at = DateTimeField(null=True, help_text='The finishing time of the task.')
 
+    @property
+    def saved_at(self):
+        return os.path.join(training_fs.location, str(self.id))
+
     def start(self):
         print('executing #%i: %s' % (self.id, self.estimator))
 
@@ -113,12 +118,16 @@ class Task(IDateTracked):
         self.save()
 
         try:
+            self.setup()
             self.run()
+            self.teardown()
         except KeyboardInterrupt:
             self.status = Task.Status.interrupted.value
         except Exception as e:
+            self.rollback()
             self.status = Task.Status.failed.value
             self.errors = str(e)
+            raise e
         else:
             self.status = Task.Status.completed.value
 
@@ -127,6 +136,15 @@ class Task(IDateTracked):
 
     def run(self):
         raise NotImplementedError
+
+    def setup(self):
+        pass
+
+    def teardown(self):
+        pass
+
+    def rollback(self):
+        pass
 
 
 class Training(Task):
@@ -139,11 +157,20 @@ class Training(Task):
     def run(self):
         print('training...')
         d = self.dataset.process()
-        params = model_to_dict(self.estimator)
-        params.setdefault('log_dir', os.path.join(training_fs.base_location, str(self.id)))
 
-        service = service_bags.estimators.build(self.estimator.service, **params)
-        self.output = service.train(d, model_to_dict(self))
+        estimator_params = model_to_dict(self.estimator)
+        train_params = model_to_dict(self)
+        train_params.setdefault('saved_at', self.saved_at)
+
+        service = service_bags.estimators.build(self.estimator.service, **estimator_params)
+        self.output = service.train(d, train_params)
+
+    def setup(self):
+        os.makedirs(self.saved_at, exist_ok=True)
+
+    def rollback(self):
+        if os.path.exists(self.saved_at):
+            shutil.rmtree(self.saved_at)
 
     def __str__(self):
         return '%s-training-%i' % (self.estimator.name, self.id)
@@ -153,8 +180,10 @@ class Prediction(Task):
     def run(self):
         print('predicting...')
         d = self.dataset.process()
-        params = model_to_dict(self.estimator)
-        params.setdefault('log_dir', os.path.join(training_fs.base_location, str(self.id)))
 
-        service = service_bags.estimators.build(self.estimator.service, **params)
-        self.output = service.predict(d, model_to_dict(self))
+        estimator_params = model_to_dict(self.estimator)
+        train_params = model_to_dict(self)
+        train_params.setdefault('saved_at', self.saved_at)
+
+        service = service_bags.estimators.build(self.estimator.service, **estimator_params)
+        self.output = service.predict(d, train_params)

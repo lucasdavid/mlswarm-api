@@ -4,3 +4,4 @@ drf-extensions
 coreapi
 markdown
 pygments
+solvian-ml

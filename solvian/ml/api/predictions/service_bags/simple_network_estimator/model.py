@@ -1,15 +1,17 @@
 import os
 
 import numpy as np
-from keras import Model, Input, callbacks
+from keras import Model, Input, callbacks, optimizers
 from keras.layers import Dense, Dropout
 from keras.utils import to_categorical
 from sklearn import metrics
+from sklearn.externals import joblib
+from sklearn.preprocessing import LabelEncoder
 
 from ..base import IEstimator
 
 
-class DenseNetworkClassifier(IEstimator):
+class SimpleNetworkClassifier(IEstimator):
     def __init__(self, name=None, **kwargs):
         super().__init__(**kwargs)
         self.name = name
@@ -25,25 +27,33 @@ class DenseNetworkClassifier(IEstimator):
 
         return Model(inputs=x, outputs=y, name=self.name)
 
-    def train(self, data, train_params):
+    def train(self, data, params):
+        learning_rate = params.get('learning_rate')
+        epochs = params.get('epochs')
+        batch_size = params.get('batch_size')
+        validation_split = params.get('validation_split', 0.3)
+        shuffle = params.get('shuffle', True)
+        saved_at = params.get('saved_at')
+        reduce_lr_patience = params.get('reduce_lr_patience', max(1, epochs // 10))
+        early_stop_patience = params.get('early_stop_patience', max(1, epochs // 3))
+
         data_columns = [c for c in data.columns if c != self.target]
 
         x = data[data_columns]
         y = data[self.target]
 
+        ye = LabelEncoder()
+        y = ye.fit_transform(y)
+
+        x = x.values
         y = to_categorical(y)
 
-        # retrieve params.
-        epochs = train_params.get('epochs')
-        batch_size = train_params.get('batch_size')
-        validation_split = train_params.get('validation_split', default=0.3)
-        shuffle = train_params.get('shuffle', default=True)
-        saved_at = train_params.get('saved_at')
-        reduce_lr_patience = train_params.get('reduce_lr_patience', default=max(1, epochs // 10))
-        early_stop_patience = train_params.get('early_stop_patience', default=max(1, epochs // 3))
+        joblib.dump(ye, os.path.join(saved_at, 'label_encoder.pkl'))
 
-        model = self.build(dropout_rate=train_params.get('dropout_rate', default=0.0))
-
+        model = self.build(dropout_rate=params.get('dropout_rate', 0.0))
+        model.compile(optimizer=optimizers.Adam(lr=learning_rate),
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
         try:
             model.fit(x, y,
                       epochs=epochs,
@@ -63,13 +73,18 @@ class DenseNetworkClassifier(IEstimator):
 
         return model.history.history
 
-    def test(self, data, test_params):
+    def test(self, data, params):
+
+        batch_size = params.get('batch_size')
+        saved_at = params.get('saved_at')
+
         data_columns = [c for c in data.columns if c != self.target]
         x = data[data_columns]
         y = data[self.target]
 
-        batch_size = test_params.get('batch_size')
-        saved_at = test_params.get('saved_at')
+        ye = joblib.load(os.path.join(saved_at, 'label_encoder.pkl'))
+        z = ye.transform(y)
+        x = x.values
 
         model = self.build()
         model.load_weights(os.path.join(saved_at, 'weights.hdf5'))
@@ -80,16 +95,16 @@ class DenseNetworkClassifier(IEstimator):
         return {
             'true_labels': y,
             'probabilities': probabilities,
-            'accuracy': metrics.accuracy_score(y, p),
-            'confusion_matrix': metrics.confusion_matrix(y, p),
+            'accuracy': metrics.accuracy_score(z, p),
+            'confusion_matrix': metrics.confusion_matrix(z, p),
         }
 
-    def predict(self, data, predict_params):
-        data_columns = [c for c in data.columns if c != self.target]
-        x = data[data_columns]
+    def predict(self, data, params):
+        batch_size = params.get('batch_size')
+        saved_at = params.get('saved_at')
 
-        batch_size = predict_params.get('batch_size')
-        saved_at = predict_params.get('saved_at')
+        data_columns = [c for c in data.columns if c != self.target]
+        x = data[data_columns].values
 
         model = self.build()
         model.load_weights(os.path.join(saved_at, 'weights.hdf5'))

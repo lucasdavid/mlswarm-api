@@ -48,8 +48,8 @@ class TaskSerializer(serializers.HyperlinkedModelSerializer):
 class TrainingSerializer(TaskSerializer):
     class Meta:
         model = models.Training
-        fields = ['dataset', 'status', 'errors', 'output', 'owner', 'estimator',
-                  'learning_rate', 'dropout_rate', 'batch_size',
+        fields = ['id', 'url', 'dataset', 'status', 'errors', 'output', 'owner', 'estimator',
+                  'learning_rate', 'dropout_rate', 'epochs', 'batch_size', 'validation_split',
                   'started_at', 'finished_at', 'created_at', 'updated_at']
         read_only_fields = ['status', 'output', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']
 
@@ -57,6 +57,6 @@ class TrainingSerializer(TaskSerializer):
 class PredictionSerializer(TaskSerializer):
     class Meta:
         model = models.Prediction
-        fields = ['dataset', 'status', 'errors', 'output', 'owner', 'estimator',
+        fields = ['id', 'url', 'dataset', 'status', 'errors', 'output', 'owner', 'estimator',
                   'started_at', 'finished_at', 'created_at', 'updated_at']
         read_only_fields = ['status', 'output', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']
