@@ -1,17 +1,18 @@
 import os
 import shutil
+import json
 
 import pandas as pd
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 from django.db.models import (TextField, ForeignKey, DateTimeField, CharField,
                               BooleanField, PositiveIntegerField, FloatField,
-                              DO_NOTHING, PROTECT, Model)
+                              DO_NOTHING, PROTECT, Model, signals)
 from django.forms import model_to_dict
 from django.utils import timezone
 
-from predictions import service_bags
-from sml.models import ChoiceEnum
+from solvian_ml.models import ChoiceEnum
+from . import services
 
 training_fs = FileSystemStorage('trainings/')
 
@@ -43,7 +44,7 @@ class Chunk(IDateTracked):
                          help_text='The dataset containing this chunk.')
     content = TextField(help_text='The data or a valid path to it.')
     delimiter = CharField(max_length=1, default=',', help_text='The {content} delimiter.')
-    service = CharField(max_length=32, blank=False, null=False, choices=service_bags.parsers.to_choices(),
+    service = CharField(max_length=32, blank=False, null=False, choices=services.parsers.to_choices(),
                         help_text='The parsing service used.')
     ignore_features = TextField(default='', blank=True,
                                 help_text='Features in content to ignore, separated by the {delimiter}.')
@@ -57,9 +58,10 @@ class Chunk(IDateTracked):
         params = model_to_dict(self)
         ignore_features, delimiter = params['ignore_features'], params['delimiter']
         params['ignore_features'] = (None if not ignore_features else
-        ignore_features.split(self.delimiter) if isinstance(ignore_features, str) else
-        ignore_features)
-        return service_bags.parsers.build(self.service, **params).process()
+                                     ignore_features.split(self.delimiter)
+                                     if isinstance(ignore_features, str) else
+                                     ignore_features)
+        return services.parsers.build(self.service, **params).process()
 
     def __str__(self):
         return '#%s ck-%i' % (self.dataset_id, self.id)
@@ -67,12 +69,12 @@ class Chunk(IDateTracked):
 
 class Estimator(IDateTracked):
     input_units = PositiveIntegerField(help_text='The number of units in the input layer.')
-    inner_units = PositiveIntegerField(help_text='The number of units in each layer.')
+    inner_units = PositiveIntegerField(default=128, help_text='The number of units in each layer.')
     output_units = PositiveIntegerField(help_text='The number of units in the output layer.')
     inner_layers = PositiveIntegerField(default=2, help_text='The number of inner layers in the estimator.')
 
     activations = CharField(max_length=32, default='relu', help_text='The activation used in the layers.')
-    service = CharField(max_length=32, choices=service_bags.estimators.to_choices(),
+    service = CharField(max_length=32, choices=services.estimators.to_choices(),
                         help_text='The ML service used.')
     target = TextField(null=True, blank=False,
                        help_text='The estimator\'s target. Valid values depend on the type of '
@@ -107,8 +109,19 @@ class Task(IDateTracked):
     finished_at = DateTimeField(null=True, help_text='The finishing time of the task.')
 
     @property
+    def report(self):
+        print(self.output)
+        return json.loads(self.output) if self.output else ""
+
+    @property
     def saved_at(self):
         return os.path.join(training_fs.location, str(self.id))
+
+    @classmethod
+    def signal_start(cls, sender, instance, created, **kwargs):
+        if issubclass(sender, Task) and created:
+            # Signal tasks to start after being created.
+            instance.start()
 
     def start(self):
         print('executing #%i: %s' % (self.id, self.estimator))
@@ -162,8 +175,8 @@ class Training(Task):
         train_params = model_to_dict(self)
         train_params.setdefault('saved_at', self.saved_at)
 
-        service = service_bags.estimators.build(self.estimator.service, **estimator_params)
-        self.output = service.train(d, train_params)
+        service = services.estimators.build(self.estimator.service, **estimator_params)
+        self.output = json.dumps(service.train(d, **train_params))
 
     def setup(self):
         os.makedirs(self.saved_at, exist_ok=True)
@@ -173,7 +186,7 @@ class Training(Task):
             shutil.rmtree(self.saved_at)
 
     def __str__(self):
-        return '%s-training-%i' % (self.estimator.name, self.id)
+        return '%s-training-%i' % (str(self.estimator), self.id)
 
 
 class Prediction(Task):
@@ -185,5 +198,5 @@ class Prediction(Task):
         train_params = model_to_dict(self)
         train_params.setdefault('saved_at', self.saved_at)
 
-        service = service_bags.estimators.build(self.estimator.service, **estimator_params)
+        service = services.estimators.build(self.estimator.service, **estimator_params)
         self.output = service.predict(d, train_params)

@@ -48,15 +48,15 @@ class TaskSerializer(serializers.HyperlinkedModelSerializer):
 class TrainingSerializer(TaskSerializer):
     class Meta:
         model = models.Training
-        fields = ['id', 'url', 'dataset', 'status', 'errors', 'output', 'owner', 'estimator',
+        fields = ['id', 'url', 'dataset', 'status', 'errors', 'report', 'owner', 'estimator',
                   'learning_rate', 'dropout_rate', 'epochs', 'batch_size', 'validation_split',
                   'started_at', 'finished_at', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'output', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'report', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']
 
 
 class PredictionSerializer(TaskSerializer):
     class Meta:
         model = models.Prediction
-        fields = ['id', 'url', 'dataset', 'status', 'errors', 'output', 'owner', 'estimator',
+        fields = ['id', 'url', 'dataset', 'status', 'errors', 'report', 'owner', 'estimator',
                   'started_at', 'finished_at', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'output', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'report', 'errors', 'started_at', 'finished_at', 'created_at', 'updated_at']

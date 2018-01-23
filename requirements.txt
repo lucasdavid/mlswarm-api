@@ -5,3 +5,5 @@ coreapi
 markdown
 pygments
 solvian-ml
+solvian-ml-stone
+solvian-ml-simple-network

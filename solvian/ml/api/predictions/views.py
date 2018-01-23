@@ -1,43 +1,17 @@
-import abc
-
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from sml.views import NestedViewSetCreateMixin
+from solvian_ml.views import NestedViewSetCreateMixin
 from . import models, serializers
 
 
-class TaskViewSetMixin(metaclass=abc.ABCMeta):
-    """TaskViewSet Mixin.
-
-    Initiates a task after creating it.
-
-    Example:
-
-        >>> class TrainingViewSet(TaskViewSetMixin, ...):
-        ...     queryset = models.Training.objects.all()
-        ...     serializer_class = serializers.TrainingSerializer
-
-    """
-
-    def perform_create(self, serializer):
-        task = serializer.save()
-        task.start()
-
-
-class PredictionViewSet(TaskViewSetMixin,
-                        NestedViewSetMixin,
-                        mixins.ListModelMixin,
-                        mixins.RetrieveModelMixin,
-                        mixins.CreateModelMixin,
-                        mixins.DestroyModelMixin,
-                        viewsets.GenericViewSet):
+class PredictionViewSet(NestedViewSetMixin,
+                        viewsets.ModelViewSet):
     queryset = models.Prediction.objects.all()
     serializer_class = serializers.PredictionSerializer
 
 
-class TrainingViewSet(TaskViewSetMixin,
-                      NestedViewSetMixin,
+class TrainingViewSet(NestedViewSetMixin,
                       viewsets.ModelViewSet):
     queryset = models.Training.objects.all()
     serializer_class = serializers.TrainingSerializer
