@@ -110,11 +110,10 @@ class Task(IDateTracked):
 
     @property
     def report(self):
-        print(self.output)
-        return json.loads(self.output) if self.output else ""
+        return json.loads(self.output) if self.output else None
 
     @property
-    def saved_at(self):
+    def report_dir(self):
         return os.path.join(training_fs.location, str(self.id))
 
     @classmethod
@@ -168,22 +167,21 @@ class Training(Task):
     validation_split = FloatField(default=0.3, help_text='The fraction of data used as validation.')
 
     def run(self):
-        print('training...')
         d = self.dataset.process()
 
         estimator_params = model_to_dict(self.estimator)
-        train_params = model_to_dict(self)
-        train_params.setdefault('saved_at', self.saved_at)
-
         service = services.estimators.build(self.estimator.service, **estimator_params)
-        self.output = json.dumps(service.train(d, **train_params))
+
+        params = model_to_dict(self)
+        json_output = service.train(d, report_dir=self.report_dir, **params)
+        self.output = json.dumps(json_output)
 
     def setup(self):
-        os.makedirs(self.saved_at, exist_ok=True)
+        os.makedirs(self.report_dir, exist_ok=True)
 
     def rollback(self):
-        if os.path.exists(self.saved_at):
-            shutil.rmtree(self.saved_at)
+        if os.path.exists(self.report_dir):
+            shutil.rmtree(self.report_dir)
 
     def __str__(self):
         return '%s-training-%i' % (str(self.estimator), self.id)
@@ -191,12 +189,11 @@ class Training(Task):
 
 class Prediction(Task):
     def run(self):
-        print('predicting...')
         d = self.dataset.process()
 
         estimator_params = model_to_dict(self.estimator)
-        train_params = model_to_dict(self)
-        train_params.setdefault('saved_at', self.saved_at)
-
         service = services.estimators.build(self.estimator.service, **estimator_params)
-        self.output = service.predict(d, train_params)
+
+        params = model_to_dict(self)
+        json_output = service.predict(d, report_dir=self.report_dir, **params)
+        self.output = json.dumps(json_output)

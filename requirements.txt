@@ -7,3 +7,4 @@ pygments
 solvian-ml
 solvian-ml-stone
 solvian-ml-simple-network
+solvian-ml-dafp
