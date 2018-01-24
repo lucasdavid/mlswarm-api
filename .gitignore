@@ -3,3 +3,11 @@ __pycache__/
 migrations/
 **.sqlite3
 .idea/
+data*/
+ckpt/
+logs/
+.tmp/
+build/
+dist/
+**.egg-info/
+*.swp
