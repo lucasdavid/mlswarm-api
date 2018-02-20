@@ -1,9 +1,10 @@
-# Solvian Machine Learning API
+# Machine Learning Swarm API
+
+Swarm executioner for Machine Learning jobs.
 
 ## Development Setup
 
 ```shell
-cd solvian/ml/api/
 pip install --upgrade -r requirements.txt
 python manage.py runserver
 ```

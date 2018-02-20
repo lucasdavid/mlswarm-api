@@ -9,9 +9,7 @@ class PredictionsConfig(AppConfig):
     estimators = None
 
     def ready(self):
-        print('PredictionsConfig#ready')
-
+        print('registering signals...')
         from . import models
-
         # Signal tasks to start after being created.
         signals.post_save.connect(models.Task.signal_start, dispatch_uid='s_start_task')
