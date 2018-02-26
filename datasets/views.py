@@ -7,7 +7,7 @@ from . import models, serializers
 
 class DatasetViewSet(NestedViewSetMixin,
                      viewsets.ModelViewSet):
-    queryset = models.Dataset.objects.select_related().defer('chunks__properties')
+    queryset = models.Dataset.objects.select_related().defer('chunks__raw_properties')
     serializer_class = serializers.DatasetSerializer
 
 

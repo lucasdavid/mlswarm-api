@@ -19,20 +19,27 @@ class IDatable(Model):
     updated_at = DateTimeField(auto_now=True)
 
 
-class IDynamicProperties:
-    properties = TextField(help_text='The properties of this estimator.')
+class IDynamicProperties(Model):
+    raw_properties = TextField(help_text='The json-like properties of this entity, stored as a string.')
 
     @property
-    def properties_(self):
-        return json.loads(self.properties)
+    def properties(self):
+        return json.loads(self.raw_properties) if self.raw_properties else None
+
+    class Meta:
+        abstract = True
 
 
 class IServiceTower(IDynamicProperties):
     service = None
-    service_builder = None
+    services = None
 
     @cached_property
     def loaded(self):
-        serializer_cls = self.service_builder.get(self.service)
-        serializer = serializer_cls(**self.properties_)
+        serializer_cls = self.services.get(self.service)
+        serializer = serializer_cls(data=self.properties)
+        serializer.is_valid(raise_exception=True)
         return serializer.save()
+
+    class Meta:
+        abstract = True

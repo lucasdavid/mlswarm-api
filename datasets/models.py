@@ -1,7 +1,8 @@
 import pandas as pd
-from django.db.models import CharField, ForeignKey, TextField, PROTECT
+from django.db.models import CharField, ForeignKey, PROTECT
+from django.utils.functional import cached_property
 
-from mlswarm_api.models import IDatable
+from mlswarm_api.models import IDatable, IServiceTower
 from . import services
 
 
@@ -10,22 +11,19 @@ class Dataset(IDatable):
         max_length=256,
         help_text='The dataset name.')
 
-    def load(self, skip: int = None, last: int = None):
+    @cached_property
+    def processed(self):
         """Concatenate loaded chunks of a dataset.
 
         :return: pandas.DataFrame
         """
-        chunks = (self.chunks.all()[skip:last]
-                  if any(e is not None for e in (skip, last))
-                  else self.chunks.all())
-
-        return pd.concat(c.load() for c in chunks)
+        return pd.concat(c.loaded.processed for c in self.chunks.all())
 
     def __str__(self):
         return self.name
 
 
-class Chunk(IDatable):
+class Chunk(IServiceTower, IDatable):
     dataset = ForeignKey(
         Dataset,
         on_delete=PROTECT,
@@ -37,14 +35,8 @@ class Chunk(IDatable):
         null=False,
         choices=services.parsers.to_choices(),
         help_text='The parsing service used.')
-    properties = TextField(help_text='The properties passed to the parsing service.')
 
-    # def load(self):
-    #     """Parse data referenced by `content` and return it.
-    #
-    #     :return: the data parsed.
-    #     """
-    #     return services.parsers.build(self.service, **model_to_dict(self)).load()
+    services = services.parsers
 
     def __str__(self):
         return '#%s ck-%i' % (self.dataset_id, self.id)

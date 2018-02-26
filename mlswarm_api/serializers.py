@@ -1,5 +1,4 @@
 import json
-from json import JSONDecodeError
 
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
@@ -22,23 +21,24 @@ class UserSerializer(HyperlinkedModelSerializer):
         read_only_fields = ['is_staff', 'groups']
 
 
-class ServiceSerializerMixin:
-    properties = serializers.JSONField()
-    service_builder = None
+class PropertiesSerializerMixin:
+    services = None
 
-    def validate(self, data):
+    def get_service_serializer(self, service: str):
+        assert self.services is not None, ('%s does not have a valid builder.' % self)
+        return self.services.get(service)
+
+    def validate(self, data: dict) -> dict:
         try:
             properties = (json.loads(data['properties'])
                           if isinstance(data['properties'], str)
                           else data['properties'])
-        except JSONDecodeError as e:
+        except json.JSONDecodeError as e:
             raise serializers.ValidationError({
                 'properties': ['Value must be valid JSON: %s' % str(e)]
             })
 
-        assert self.service_builder is not None, ('%s does not have a valid builder' % self)
-
-        serializer = self.service_builder.build(data['service'], data=properties)
+        serializer = self.get_service_serializer(data['service'])(data=properties)
         assert isinstance(serializer, Serializer), (
             'Service %s\'s schema should be a valid Serializer class instance.'
             % serializer)
@@ -49,17 +49,7 @@ class ServiceSerializerMixin:
                 'properties': serializer.errors
             })
 
-        data['properties'] = json.dumps(serializer.validated_data)
+        data['raw_properties'] = json.dumps(serializer.validated_data)
+        del data['properties']
 
         return data
-
-    def to_representation(self, instance):
-        r = super().to_representation(instance)
-
-        if isinstance(r['properties'], str):
-            try:
-                r['properties'] = json.loads(r['properties'])
-            except JSONDecodeError:
-                pass
-
-        return r
