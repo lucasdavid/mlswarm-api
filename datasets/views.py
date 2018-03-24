@@ -1,17 +1,22 @@
 from rest_framework import viewsets
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from mlswarm_api.views import NestedViewSetCreateMixin
-from . import models, serializers
+from .models import Dataset, Chunk
+from .serializers import DatasetSerializer, ChunkSerializer
 
 
-class DatasetViewSet(NestedViewSetMixin,
-                     viewsets.ModelViewSet):
-    queryset = models.Dataset.objects.select_related().defer('chunks__raw_properties')
-    serializer_class = serializers.DatasetSerializer
+class DatasetViewSet(viewsets.ModelViewSet):
+    queryset = (Dataset.objects
+                .prefetch_related('chunks')
+                .defer('chunks__raw_properties'))
+    serializer_class = DatasetSerializer
 
 
-class ChunkViewSet(NestedViewSetCreateMixin,
+class ChunkViewSet(NestedViewSetMixin,
                    viewsets.ModelViewSet):
-    queryset = models.Chunk.objects.all()
-    serializer_class = serializers.ChunkSerializer
+    queryset = Chunk.objects.all()
+    serializer_class = ChunkSerializer
+
+    def perform_create(self, serializer):
+        q = self.get_parents_query_dict()
+        serializer.save(dataset_id=q['dataset'])

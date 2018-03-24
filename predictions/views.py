@@ -1,22 +1,31 @@
 from rest_framework import viewsets
-from rest_framework_extensions.mixins import NestedViewSetMixin
 
-from . import models, serializers
-
-
-class PredictionViewSet(NestedViewSetMixin,
-                        viewsets.ModelViewSet):
-    queryset = models.Prediction.objects.all()
-    serializer_class = serializers.PredictionSerializer
+from mlswarm_api.views import NestedCreateMixin
+from .models import Estimator, Training, Test, Predict
+from .serializers import (EstimatorSerializer, TrainingSerializer,
+                          TestSerializer, PredictSerializer)
 
 
-class TrainingViewSet(NestedViewSetMixin,
+class EstimatorViewSet(viewsets.ModelViewSet):
+    queryset = (Estimator.objects
+                .prefetch_related('trainings'))
+    queryset = Estimator.objects.all()
+    serializer_class = EstimatorSerializer
+
+
+class TrainingViewSet(NestedCreateMixin,
                       viewsets.ModelViewSet):
-    queryset = models.Training.objects.all()
-    serializer_class = serializers.TrainingSerializer
+    queryset = Training.objects.all()
+    serializer_class = TrainingSerializer
 
 
-class EstimatorViewSet(NestedViewSetMixin,
-                       viewsets.ModelViewSet):
-    queryset = models.Estimator.objects.all()
-    serializer_class = serializers.EstimatorSerializer
+class TestViewSet(NestedCreateMixin,
+                  viewsets.ModelViewSet):
+    queryset = Test.objects.all()
+    serializer_class = TestSerializer
+
+
+class PredictViewSet(NestedCreateMixin,
+                     viewsets.ModelViewSet):
+    queryset = Predict.objects.all()
+    serializer_class = PredictSerializer

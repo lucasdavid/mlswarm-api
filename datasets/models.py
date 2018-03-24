@@ -1,6 +1,4 @@
-import pandas as pd
 from django.db.models import CharField, ForeignKey, PROTECT
-from django.utils.functional import cached_property
 
 from mlswarm_api.models import IDatable, IServiceTower
 from . import services
@@ -11,16 +9,8 @@ class Dataset(IDatable):
         max_length=256,
         help_text='The dataset name.')
 
-    @cached_property
-    def processed(self):
-        """Concatenate loaded chunks of a dataset.
-
-        :return: pandas.DataFrame
-        """
-        return pd.concat(c.loaded.processed for c in self.chunks.all())
-
     def __str__(self):
-        return self.name
+        return '#%i %s' % (self.pk, self.name)
 
 
 class Chunk(IServiceTower, IDatable):
@@ -34,9 +24,9 @@ class Chunk(IServiceTower, IDatable):
         blank=False,
         null=False,
         choices=services.parsers.to_choices(),
-        help_text='The parsing service used.')
+        help_text='The service used to parse the content within the properties.')
 
     services = services.parsers
 
     def __str__(self):
-        return '#%s ck-%i' % (self.dataset_id, self.id)
+        return '#%s %i' % (self.dataset, self.pk)

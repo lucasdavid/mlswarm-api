@@ -1,8 +1,11 @@
 import json
+from typing import ClassVar
 
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.serializers import (Serializer, ModelSerializer, HyperlinkedModelSerializer)
+
+from mlswarm.infrastructure.services import ServiceBuilder
 
 
 class GroupSerializer(ModelSerializer):
@@ -17,16 +20,16 @@ class UserSerializer(HyperlinkedModelSerializer):
 
     class Meta:
         model = User
-        fields = ['url', 'username', 'email', 'is_staff', 'groups']
-        read_only_fields = ['is_staff', 'groups']
+        fields = ['id', 'url', 'username', 'email', 'is_staff', 'groups']
+        read_only_fields = ['id', 'url', 'is_staff', 'groups']
 
 
 class PropertiesSerializerMixin:
-    services = None
+    services: ServiceBuilder = None
 
-    def get_service_serializer(self, service: str):
+    def service_serializer_cls(self, data: dict) -> ClassVar[Serializer]:
         assert self.services is not None, ('%s does not have a valid builder.' % self)
-        return self.services.get(service)
+        return self.services.get(data['service'])
 
     def validate(self, data: dict) -> dict:
         try:
@@ -38,7 +41,7 @@ class PropertiesSerializerMixin:
                 'properties': ['Value must be valid JSON: %s' % str(e)]
             })
 
-        serializer = self.get_service_serializer(data['service'])(data=properties)
+        serializer = self.service_serializer_cls(data)(data=properties)
         assert isinstance(serializer, Serializer), (
             'Service %s\'s schema should be a valid Serializer class instance.'
             % serializer)

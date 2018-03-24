@@ -19,7 +19,7 @@ class Estimator(IServiceTower,
     services = services.estimators
     service = CharField(
         max_length=64,
-        choices=services.estimators.to_choices(),
+        choices=services.to_choices(),
         help_text='The ML service used.')
 
     def __str__(self):
@@ -38,7 +38,9 @@ class Task(IDynamicProperties, IDatable):
         completed = 'completed'
 
     dataset = ForeignKey(Dataset, on_delete=DO_NOTHING, help_text='The dataset used on this task.')
-    estimator = ForeignKey(Estimator, on_delete=DO_NOTHING, help_text='The estimator used on this task.')
+    estimator = ForeignKey(Estimator, on_delete=DO_NOTHING,
+                           related_name='%(class)ss',
+                           help_text='The estimator used on this task.')
     owner = ForeignKey(User, on_delete=PROTECT, help_text='The user who requested the prediction.')
 
     status = CharField(max_length=12, choices=Status.choices(),
@@ -65,8 +67,7 @@ class Task(IDynamicProperties, IDatable):
             instance.start()
 
     def start(self):
-        print('executing #%i: %s' % (self.id, self.estimator))
-
+        print('%s #%i: %s' % (self.__class__.__class__, self.id, self.estimator))
         self.status = Task.Status.running.value
         self.started_at = timezone.now()
         self.save()
@@ -81,12 +82,11 @@ class Task(IDynamicProperties, IDatable):
             self.rollback()
             self.status = Task.Status.failed.value
             self.errors = str(e)
-            raise e
         else:
             self.status = Task.Status.completed.value
-
-        self.finished_at = timezone.now()
-        self.save()
+        finally:
+            self.finished_at = timezone.now()
+            self.save()
 
     def run(self):
         raise NotImplementedError
@@ -121,9 +121,18 @@ class Training(Task):
         return '%s-training-%i' % (str(self.estimator), self.id)
 
 
-class Testing(Task):
+class PostTrainingTask(Task):
+    class Meta:
+        abstract = True
+
+    training = ForeignKey(Training,
+                          on_delete=PROTECT,
+                          help_text='Estimator\'s training that will be evaluated.')
+
+
+class Test(PostTrainingTask):
     def run(self):
-        d = self.dataset.processed
+        d = self.dataset.chunks.all()
         estimator = self.estimator.loaded
         json_output = estimator.test(d,
                                      report_dir=self.report_dir,
@@ -131,7 +140,7 @@ class Testing(Task):
         self.output = json.dumps(json_output)
 
 
-class Prediction(Task):
+class Predict(PostTrainingTask):
     def run(self):
         d = self.dataset.processed
         estimator = self.estimator.loaded
