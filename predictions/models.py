@@ -17,10 +17,9 @@ training_fs = FileSystemStorage('trainings/')
 class Estimator(IServiceTower,
                 IDatable):
     services = services.estimators
-    service = CharField(
-        max_length=64,
-        choices=services.to_choices(),
-        help_text='The ML service used.')
+    service = CharField(max_length=64,
+                        choices=services.to_choices(),
+                        help_text='The ML service used.')
 
     def __str__(self):
         return '%s #%i' % (self.service, self.id)

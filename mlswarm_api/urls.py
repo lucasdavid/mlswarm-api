@@ -1,11 +1,13 @@
+from django.conf import settings
 from django.conf.urls import url, include
+from django.conf.urls.static import static
 from django.contrib import admin
 from rest_framework.documentation import include_docs_urls
 from rest_framework_extensions.routers import ExtendedDefaultRouter
 
 from datasets import views as d_views
 from predictions import views as p_views
-from . import settings, views as root_views
+from . import views as root_views
 
 router = ExtendedDefaultRouter()
 router.register('users', root_views.UserViewSet)
@@ -29,9 +31,9 @@ t_router.register('predictions', p_views.PredictViewSet,
                   base_name='predictions')
 
 urlpatterns = [
-    url('^', include(router.urls)),
-    url('^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    url('^admin/', admin.site.urls),
-    url('^docs/', include_docs_urls(title=settings.DOCS.get('title', None),
-                                    description=settings.DOCS.get('description', None))),
-]
+                  url('^', include(router.urls)),
+                  url('^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+                  url('^admin/', admin.site.urls),
+                  url('^docs/', include_docs_urls(title=settings.DOCS.get('title', None),
+                                                  description=settings.DOCS.get('description', None))),
+              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
