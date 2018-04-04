@@ -4,10 +4,10 @@ import shutil
 
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
-from django.db.models import TextField, ForeignKey, DateTimeField, CharField, DO_NOTHING, PROTECT
+from django.db.models import TextField, ForeignKey, DateTimeField, CharField, DO_NOTHING, PROTECT, ManyToManyField
 from django.utils import timezone
 
-from datasets.models import Dataset
+from datasets.models import Chunk
 from mlswarm_api.models import ChoiceEnum, IDatable, IDynamicProperties, IServiceTower
 from . import services
 
@@ -36,10 +36,17 @@ class Task(IDynamicProperties, IDatable):
         failed = 'failed'
         completed = 'completed'
 
-    dataset = ForeignKey(Dataset, on_delete=DO_NOTHING, help_text='The dataset used on this task.')
-    estimator = ForeignKey(Estimator, on_delete=DO_NOTHING,
-                           related_name='%(class)ss',
-                           help_text='The estimator used on this task.')
+    chunks = ManyToManyField(
+        Chunk,
+        related_name='%(class)ss',
+        help_text='The chunks used on this task.')
+
+    estimator = ForeignKey(
+        Estimator,
+        on_delete=DO_NOTHING,
+        related_name='%(class)ss',
+        help_text='The estimator used on this task.')
+
     owner = ForeignKey(User, on_delete=PROTECT, help_text='The user who requested the prediction.')
 
     status = CharField(max_length=12, choices=Status.choices(),
@@ -59,14 +66,7 @@ class Task(IDynamicProperties, IDatable):
     def report_dir(self):
         return os.path.join(training_fs.location, str(self.id))
 
-    @classmethod
-    def signal_start(cls, sender, instance, created, **kwargs):
-        if issubclass(sender, Task) and created:
-            # Signal tasks to start after being created.
-            instance.start()
-
     def start(self):
-        print('%s #%i: %s' % (self.__class__.__class__, self.id, self.estimator))
         self.status = Task.Status.running.value
         self.started_at = timezone.now()
         self.save()
@@ -99,11 +99,17 @@ class Task(IDynamicProperties, IDatable):
     def rollback(self):
         pass
 
+    def __str__(self):
+        return '%s #%i: %s' % (self.__class__.__name__,
+                               self.pk,
+                               self.estimator)
+
 
 class Training(Task):
     def run(self):
-        d = self.dataset.processed
         estimator = self.estimator.loaded
+        d = [c.loaded for c in self.chunks.all()]
+        d = d[0].concatenate(d)
         json_output = estimator.train(d,
                                       report_dir=self.report_dir,
                                       **self.properties)
@@ -115,9 +121,6 @@ class Training(Task):
     def rollback(self):
         if os.path.exists(self.report_dir):
             shutil.rmtree(self.report_dir)
-
-    def __str__(self):
-        return '%s-training-%i' % (str(self.estimator), self.id)
 
 
 class PostTrainingTask(Task):

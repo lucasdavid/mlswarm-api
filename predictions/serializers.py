@@ -10,24 +10,37 @@ from . import models, services
 
 class TaskSerializer(PropertiesSerializerMixin,
                      serializers.ModelSerializer):
-    properties = serializers.JSONField(help_text='The json-like properties for task.')
+    properties = serializers.JSONField(
+        help_text='The json-like properties for task.')
     owner = serializers.PrimaryKeyRelatedField(
-        read_only=True,
-        default=serializers.CurrentUserDefault())
-    estimator = serializers.PrimaryKeyRelatedField(read_only=True)
+        read_only=True)
+    estimator = serializers.PrimaryKeyRelatedField(
+        read_only=True)
+
+    chunks = serializers.PrimaryKeyRelatedField(
+        read_only=False,
+        many=True,
+        queryset=models.Chunk.objects.all())
+
+    class Meta:
+        model = models.Task
+        fields = ['id', 'chunks', 'status', 'errors', 'report', 'owner', 'estimator',
+                  'properties', 'started_at', 'finished_at', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'report', 'owner', 'estimator', 'errors',
+                            'started_at', 'finished_at', 'created_at', 'updated_at']
+
+    def validate_chunks(self, value):
+        if not value:
+            raise serializers.ValidationError('At least one chunk must be '
+                                              'selected in order to perform '
+                                              'this task.')
+        return value
 
     def service_serializer_cls(self, data: dict) -> ClassVar[Serializer]:
         q = self.context['view'].get_parents_query_dict()
         e = models.Estimator.objects.get(pk=q['estimator'])
 
         return e.services.get(e.service)
-
-    class Meta:
-        model = models.Task
-        fields = ['id', 'dataset', 'status', 'errors', 'report', 'owner', 'estimator',
-                  'properties', 'started_at', 'finished_at', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'report', 'owner', 'estimator', 'errors',
-                            'started_at', 'finished_at', 'created_at', 'updated_at']
 
 
 class TrainingSerializer(TaskSerializer):
@@ -66,9 +79,15 @@ class EstimatorSerializer(PropertiesSerializerMixin,
                                                  'for this estimator\'s service.')
     services = services.estimators
 
-    trainings = TrainingSerializer(many=True, read_only=True)
-
     class Meta:
         model = models.Estimator
-        fields = ['id', 'url', 'service', 'properties', 'created_at', 'updated_at', 'trainings']
-        read_only_fields = ['id', 'url', 'created_at', 'updated_at', 'trainings']
+        fields = ['id', 'url', 'service', 'properties', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'url', 'created_at', 'updated_at']
+
+
+class EstimatorDetailSerializer(EstimatorSerializer):
+    trainings = TrainingSerializer(many=True, read_only=True)
+
+    class Meta(EstimatorSerializer.Meta):
+        fields = EstimatorSerializer.Meta.fields + ['trainings']
+        read_only_fields = EstimatorSerializer.Meta.read_only_fields + ['trainings']

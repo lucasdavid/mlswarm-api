@@ -1,31 +1,44 @@
 from rest_framework import viewsets
+from rest_framework_extensions.mixins import NestedViewSetMixin, DetailSerializerMixin
 
-from mlswarm_api.views import NestedCreateMixin
 from .models import Estimator, Training, Test, Predict
-from .serializers import (EstimatorSerializer, TrainingSerializer,
+from .serializers import (EstimatorSerializer, EstimatorDetailSerializer,
+                          TaskSerializer, TrainingSerializer,
                           TestSerializer, PredictSerializer)
 
 
-class EstimatorViewSet(viewsets.ModelViewSet):
+class EstimatorViewSet(DetailSerializerMixin,
+                       viewsets.ModelViewSet):
     queryset = (Estimator.objects
                 .prefetch_related('trainings'))
-    queryset = Estimator.objects.all()
     serializer_class = EstimatorSerializer
+    serializer_detail_class = EstimatorDetailSerializer
 
 
-class TrainingViewSet(NestedCreateMixin,
+class TaskCreateMixin(NestedViewSetMixin):
+    def perform_create(self, serializer: TaskSerializer):
+        # Save parents' ids within the model.
+        d = self.get_parents_query_dict()
+        d = {k + '_id': v for k, v in d.items()}
+
+        serializer.save(**d, owner=self.request.user)
+        serializer.instance.start()
+
+
+class TrainingViewSet(TaskCreateMixin,
                       viewsets.ModelViewSet):
-    queryset = Training.objects.all()
+    queryset = (Training.objects
+                .prefetch_related('chunks'))
     serializer_class = TrainingSerializer
 
 
-class TestViewSet(NestedCreateMixin,
+class TestViewSet(TaskCreateMixin,
                   viewsets.ModelViewSet):
-    queryset = Test.objects.all()
+    queryset = Test.objects
     serializer_class = TestSerializer
 
 
-class PredictViewSet(NestedCreateMixin,
+class PredictViewSet(TaskCreateMixin,
                      viewsets.ModelViewSet):
-    queryset = Predict.objects.all()
+    queryset = Predict.objects
     serializer_class = PredictSerializer

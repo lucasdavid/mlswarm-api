@@ -1,0 +1,38 @@
+{% extends "rest_framework/login.html" %}
+{% load static %}
+
+{% block title %}ML Swarm{% endblock %}
+{% block branding %}
+<h3 style="margin: 0 0 20px;">ML Swarm</h3>
+{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.min.css" %}" type="text/css">
+<link rel="stylesheet" type="text/css" href="{% static "rest_framework/css/prettify.css" %}"/>
+<link rel="stylesheet" type="text/css" href="{% static "rest_framework/css/default.css" %}"/>
+<link rel="stylesheet" type="text/css" href="{% static "css/mlswarm.css" %}" type="text/css">
+<link rel="stylesheet" type="text/css" href="{% static "css/prettify.css" %}" type="text/css">
+{% if code_style %}
+<style>{{ code_style }}</style>{% endif %}
+{% endblock %}
+
+{% block bootstrap_navbar_variant %}{% endblock %}
+
+{% block script %}
+<script>
+    window.drf = {
+      csrfHeaderName: "{{ csrf_header_name|default:'X-CSRFToken' }}",
+      csrfCookieName: "{{ csrf_cookie_name|default:'csrftoken' }}"
+    };
+</script>
+<script src="{% static "rest_framework/js/jquery-1.12.4.min.js" %}"></script>
+<script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
+<script src="{% static "rest_framework/js/csrf.js" %}"></script>
+<script src="{% static "rest_framework/js/bootstrap.min.js" %}"></script>
+<script src="{% static "js/default.js" %}"></script>
+<script>
+$(document).ready(function() {
+  $('form').ajaxForm();
+});
+</script>
+{% endblock %}

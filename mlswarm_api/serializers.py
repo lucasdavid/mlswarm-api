@@ -8,14 +8,13 @@ from rest_framework.serializers import (Serializer, ModelSerializer, Hyperlinked
 from mlswarm.infrastructure.services import ServiceBuilder
 
 
-class GroupSerializer(ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ['name']
-        read_only_fields = ['name']
-
-
 class UserSerializer(HyperlinkedModelSerializer):
+    class GroupSerializer(ModelSerializer):
+        class Meta:
+            model = Group
+            fields = ['name']
+            read_only_fields = ['name']
+
     groups = GroupSerializer(many=True)
 
     class Meta:

@@ -10,7 +10,7 @@ class Dataset(IDatable):
         help_text='The dataset name.')
 
     def __str__(self):
-        return '#%i %s' % (self.pk, self.name)
+        return str(self.name)
 
 
 class Chunk(IServiceTower, IDatable):
@@ -29,4 +29,4 @@ class Chunk(IServiceTower, IDatable):
     services = services.parsers
 
     def __str__(self):
-        return '#%s %i' % (self.dataset, self.pk)
+        return 'ds-%s #%i' % (self.dataset, self.pk)

@@ -129,7 +129,6 @@ MEDIA_ROOT = '/work/mlswarm_api/api/media/'
 
 
 # Rest API
-
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
