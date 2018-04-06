@@ -24,6 +24,10 @@ class TaskCreateMixin(NestedViewSetMixin):
         serializer.save(**d, owner=self.request.user)
         serializer.instance.start()
 
+    def perform_destroy(self, instance):
+        instance.delete()
+        instance.rollback()
+
 
 class TrainingViewSet(TaskCreateMixin,
                       viewsets.ModelViewSet):

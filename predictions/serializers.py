@@ -58,7 +58,7 @@ class TestSerializer(TaskSerializer):
         return super().service_serializer_cls(data).Predict
 
     class Meta:
-        model = models.Predict
+        model = models.Test
         fields = TaskSerializer.Meta.fields
         read_only_fields = TaskSerializer.Meta.read_only_fields
 

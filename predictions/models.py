@@ -1,14 +1,17 @@
 import json
 import os
 import shutil
+from logging import warning
 
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
-from django.db.models import TextField, ForeignKey, DateTimeField, CharField, DO_NOTHING, PROTECT, ManyToManyField
+from django.db.models import (TextField, ForeignKey, DateTimeField, CharField,
+                              DO_NOTHING, PROTECT, ManyToManyField)
 from django.utils import timezone
 
 from datasets.models import Chunk
-from mlswarm_api.models import ChoiceEnum, IDatable, IDynamicProperties, IServiceTower
+from mlswarm_api.models import (ChoiceEnum, IDatable, IDynamicProperties,
+                                IServiceTower)
 from . import services
 
 training_fs = FileSystemStorage('trainings/')
@@ -66,6 +69,11 @@ class Task(IDynamicProperties, IDatable):
     def report_dir(self):
         return os.path.join(training_fs.location, str(self.id))
 
+    @property
+    def merged_chunks(self):
+        d = [c.loaded for c in self.chunks.all()]
+        return d[0].concatenate(d)
+
     def start(self):
         self.status = Task.Status.running.value
         self.started_at = timezone.now()
@@ -78,6 +86,8 @@ class Task(IDynamicProperties, IDatable):
         except KeyboardInterrupt:
             self.status = Task.Status.interrupted.value
         except Exception as e:
+            warning(e)
+
             self.rollback()
             self.status = Task.Status.failed.value
             self.errors = str(e)
@@ -108,12 +118,12 @@ class Task(IDynamicProperties, IDatable):
 class Training(Task):
     def run(self):
         estimator = self.estimator.loaded
-        d = [c.loaded for c in self.chunks.all()]
-        d = d[0].concatenate(d)
-        json_output = estimator.train(d,
-                                      report_dir=self.report_dir,
-                                      **self.properties)
-        self.output = json.dumps(json_output)
+        report = estimator.train(self.merged_chunks,
+                                 report_dir=self.report_dir,
+                                 **self.properties)
+        estimator.save(self.report_dir)
+        estimator.dispose()
+        self.output = json.dumps(report)
 
     def setup(self):
         os.makedirs(self.report_dir, exist_ok=True)
@@ -134,19 +144,19 @@ class PostTrainingTask(Task):
 
 class Test(PostTrainingTask):
     def run(self):
-        d = self.dataset.chunks.all()
         estimator = self.estimator.loaded
-        json_output = estimator.test(d,
-                                     report_dir=self.report_dir,
-                                     **self.properties)
-        self.output = json.dumps(json_output)
+        report = (estimator
+                  .load(self.training.report_dir)
+                  .test(self.merged_chunks, report_dir=self.report_dir, **self.properties))
+        estimator.dispose()
+        self.output = json.dumps(report)
 
 
 class Predict(PostTrainingTask):
     def run(self):
-        d = self.dataset.processed
         estimator = self.estimator.loaded
-        json_output = estimator.predict(d,
-                                        report_dir=self.report_dir,
-                                        **self.properties)
-        self.output = json.dumps(json_output)
+        report = (estimator
+                  .load(self.training.report_dir)
+                  .predict(self.merged_chunks, report_dir=self.report_dir, **self.properties))
+        estimator.dispose()
+        self.output = json.dumps(report)
