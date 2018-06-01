@@ -1,4 +1,5 @@
 from django.db.models import CharField, ForeignKey, PROTECT
+from taggit.managers import TaggableManager
 
 from mlswarm_api.models import IDatable, IServiceTower
 from . import services
@@ -27,6 +28,7 @@ class Chunk(IServiceTower, IDatable):
         help_text='The service used to parse the content within the properties.')
 
     services = services.parsers
+    tags = TaggableManager()
 
     def __str__(self):
         return 'ds-%s #%i' % (self.dataset, self.pk)

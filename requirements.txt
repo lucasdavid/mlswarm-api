@@ -1,5 +1,7 @@
 django
+django-taggit
 djangorestframework
+django-taggit-serializer
 drf-extensions
 coreapi
 markdown

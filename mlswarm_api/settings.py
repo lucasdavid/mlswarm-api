@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'taggit',
+    'taggit_serializer',
     'datasets.apps.DatasetsConfig',
     'predictions.apps.PredictionsConfig'
 ]
@@ -140,10 +142,12 @@ REST_FRAMEWORK = {
 
 LOGIN_REDIRECT_URL = '/'
 
-
 ### API Docs
 
 DOCS = {
     'title': 'Machine Learning Swarm',
     'description': 'Swarm Executioner for Machine Learning Tasks'
 }
+
+
+TAGGIT_CASE_INSENSITIVE = True
