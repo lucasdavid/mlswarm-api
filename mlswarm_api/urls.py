@@ -32,7 +32,7 @@ t_router.register('predictions', p_views.PredictViewSet,
 
 urlpatterns = [
                   url('^', include(router.urls)),
-                  url('^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+                  url('^auth/', include('rest_framework.urls', namespace='rest_framework')),
                   url('^admin/', admin.site.urls),
                   url('^docs/', include_docs_urls(title=settings.DOCS.get('title', None),
                                                   description=settings.DOCS.get('description', None))),

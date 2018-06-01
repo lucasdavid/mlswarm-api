@@ -122,7 +122,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "staticfiles"),
+    os.path.join(BASE_DIR, 'mlswarm_api',  'static'),
 ]
 
 MEDIA_ROOT = '/work/mlswarm_api/api/media/'
@@ -136,6 +136,10 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissions',
     ]
 }
+
+
+LOGIN_REDIRECT_URL = '/'
+
 
 ### API Docs
 
