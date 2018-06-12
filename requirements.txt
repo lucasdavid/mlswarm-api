@@ -3,6 +3,7 @@ django-taggit
 djangorestframework
 django-taggit-serializer
 drf-extensions
+djangorestframework-queryfields
 coreapi
 markdown
 pygments

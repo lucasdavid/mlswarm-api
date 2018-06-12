@@ -1,5 +1,6 @@
 from typing import ClassVar
 
+from drf_queryfields import QueryFieldsMixin
 from rest_framework import serializers
 from rest_framework.serializers import Serializer
 
@@ -8,7 +9,8 @@ from mlswarm_api.serializers import PropertiesSerializerMixin
 from . import models, services
 
 
-class TaskSerializer(PropertiesSerializerMixin,
+class TaskSerializer(QueryFieldsMixin,
+                     PropertiesSerializerMixin,
                      serializers.ModelSerializer):
     properties = serializers.JSONField(
         help_text='The json-like properties for task.')
@@ -24,9 +26,9 @@ class TaskSerializer(PropertiesSerializerMixin,
 
     class Meta:
         model = models.Task
-        fields = ['id', 'chunks', 'status', 'errors', 'report', 'owner', 'estimator',
+        fields = ['id', 'chunks', 'status', 'report', 'errors', 'owner', 'estimator',
                   'properties', 'started_at', 'finished_at', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'report', 'owner', 'estimator', 'errors',
+        read_only_fields = ['status', 'owner', 'estimator', 'report', 'errors',
                             'started_at', 'finished_at', 'created_at', 'updated_at']
 
     def validate_chunks(self, value):
@@ -55,7 +57,7 @@ class TrainingSerializer(TaskSerializer):
 
 class TestSerializer(TaskSerializer):
     def service_serializer_cls(self, data: dict) -> ClassVar[ITest]:
-        return super().service_serializer_cls(data).Predict
+        return super().service_serializer_cls(data).Test
 
     class Meta:
         model = models.Test
